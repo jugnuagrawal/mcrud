@@ -1,0 +1,23 @@
+{
+  "name": "mcrud",
+  "version": "1.0.0",
+  "description": "MongoDB Crudder",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/jugnuagrawal/mcrud.git"
+  },
+  "author": "Jugnu Agrawal",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jugnuagrawal/mcrud/issues"
+  },
+  "homepage": "https://github.com/jugnuagrawal/mcrud#readme",
+  "dependencies": {
+    "log4js": "^4.0.2",
+    "mongodb": "^3.1.13"
+  }
+}

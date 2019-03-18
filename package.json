@@ -2,6 +2,12 @@
   "name": "mcrud",
   "version": "1.0.0",
   "description": "MongoDB Crudder",
+  "keywords": [
+    "mongodb",
+    "crud",
+    "smallest",
+    "HTTP CRUD"
+  ],
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

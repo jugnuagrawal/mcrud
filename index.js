@@ -2,7 +2,7 @@ const MongoClient = require('mongodb').MongoClient;
 
 const utils = require('./utils');
 
-module.exports.getCRUDMethods = (options = { url: '', database: '', collection: '' }) => {
+module.exports.getCRUDMethods = (options = { url: 'mongodb://localhost:27017', database: 'mcrud', collection: '' }) => {
     let collection;
     let error;
     MongoClient.connect(options.url, (err, client) => {
@@ -79,7 +79,7 @@ module.exports.getCRUDMethods = (options = { url: '', database: '', collection: 
                 return;
             }
             try {
-                generateIdIfNot(options, data).then(newData => {
+                generateIdIfNot(data).then(newData => {
                     collection.insert(newData, (err, doc) => {
                         if (err) {
                             reject(err);

@@ -28,18 +28,18 @@ module.exports.getNextId = (options) => {
                     return;
                 }
                 if (!doc) {
-                    collection.insert({ _id: options.collection, next: 1 }, (err3, doc2) => {
+                    collection.insert({ _id: options.collection, next: 2 }, (err3, doc2) => {
                         if (err3) {
                             reject(err3);
                             return;
                         }
-                        const id = generateId(options.collection, 8, doc2.next)
+                        const id = generateId(options.collection, 8, 1);
                         resolve(id);
                     });
                 } else {
-                    const id = generateId(options.collection, 8, doc1.next + 1);
-                    const nextVal = parseInt(doc1.next + '') + 1;
-                    collection.findOneAndUpdate({ _id: options.collection }, { next: nextVal }, (err3, doc2) => {
+                    const id = generateId(options.collection, 8, doc.next);
+                    const nextVal = parseInt(doc.next + '') + 1;
+                    collection.findOneAndUpdate({ _id: options.collection }, { $set: { next: nextVal } }, (err3, doc2) => {
                         if (err3) {
                             reject(err3);
                             return;

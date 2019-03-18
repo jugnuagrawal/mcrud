@@ -17,7 +17,7 @@
     "url": "git+ssh://git@github.com/jugnuagrawal/mcrud.git"
   },
   "author": "Jugnu Agrawal",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/jugnuagrawal/mcrud/issues"
   },

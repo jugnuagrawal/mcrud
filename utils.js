@@ -31,14 +31,15 @@ e.getNextId = (options) => {
                         collection.insert({ _id: options.collection, next: 2 }, (err3, doc2) => {
                             if (err3) throw err3;
                             const id = renderId.render(pattern, 1);
+                            client.close();
                             resolve(id);
                         });
                     } else {
-
                         const id = renderId.render(pattern, doc.next);
                         const nextVal = parseInt(doc.next + '') + 1;
                         collection.findOneAndUpdate({ _id: options.collection }, { $set: { next: nextVal } }, (err3, doc2) => {
                             if (err3) throw err3;
+                            client.close();
                             resolve(id);
                         });
                     }

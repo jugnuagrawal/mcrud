@@ -7,8 +7,18 @@ const logger = log4js.getLogger('mcrud');
 
 logger.level = process.env.LOG_LEVEL || 'info';
 
-module.exports.getCRUDMethods = (options = { url: 'mongodb://localhost:27017', database: 'mcrud', collection: '' }) => {
+/**
+ * @param {{url:string,database:string,collection:string,customId:boolean,idPattern:string}} options CRUD options
+ */
+module.exports.getCRUDMethods = (options) => {
+    if (options.idPattern && options.idPattern.trim()) {
+        options.customId = true;
+    }
     const e = {};
+    /**
+     * @param {{key:value}} filter mongodb filter
+     * @returns {Promise} Promise<any>
+     */
     e.count = (filter) => {
         return new Promise((resolve, reject) => {
             try {
@@ -30,7 +40,11 @@ module.exports.getCRUDMethods = (options = { url: 'mongodb://localhost:27017', d
             }
         });
     };
-    e.get = (params = { filter: {}, sort: '', page: 1, count: 30 }) => {
+    /**
+     * @param {{filter:{key:value},sort:string,page:number,count:number}} params get record options
+     * @returns {Promise} Promise<any>
+     */
+    e.get = (params) => {
         return new Promise((resolve, reject) => {
             try {
                 if (!params) {
@@ -68,13 +82,17 @@ module.exports.getCRUDMethods = (options = { url: 'mongodb://localhost:27017', d
             }
         });
     };
+    /**
+     * @param {{key:value}} data data to be insterted as new record
+     * @returns {Promise} Promise<any>
+     */
     e.post = (data) => {
         return new Promise((resolve, reject) => {
             try {
                 MongoClient.connect(options.url, (err1, client) => {
                     if (err1) throw err1;
                     const collection = client.db(options.database).collection(options.collection);
-                    generateIdIfNot(data).then(newData => {
+                    generateIdIfRequired(data).then(newData => {
                         collection.insert(newData, (err2, doc) => {
                             if (err2) throw err2;
                             resolve(doc)
@@ -90,6 +108,11 @@ module.exports.getCRUDMethods = (options = { url: 'mongodb://localhost:27017', d
             }
         });
     };
+    /**
+     * @param {{key:value}} filter mongodb filter
+     * @param {{key:value}} data data to be insterted as new record
+     * @returns {Promise} Promise<any>
+     */
     e.put = (filter, data) => {
         return new Promise((resolve, reject) => {
             try {
@@ -111,6 +134,10 @@ module.exports.getCRUDMethods = (options = { url: 'mongodb://localhost:27017', d
             }
         });
     };
+    /**
+     * @param {{key:value}} filter mongodb filter
+     * @returns {Promise} Promise<any>
+     */
     e.delete = (filter) => {
         return new Promise((resolve, reject) => {
             try {
@@ -132,9 +159,9 @@ module.exports.getCRUDMethods = (options = { url: 'mongodb://localhost:27017', d
             }
         });
     };
-    function generateIdIfNot(data) {
+    function generateIdIfRequired(data) {
         return new Promise((resolve, reject) => {
-            if (data._id) {
+            if (data._id || !options.customId) {
                 resolve(data);
             } else {
                 utils.getNextId(options).then(id => {

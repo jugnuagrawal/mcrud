@@ -1,5 +1,6 @@
 const log4js = require('log4js');
 const MongoClient = require('mongodb').MongoClient;
+const renderId = require('render-id');
 
 const utils = require('./utils');
 
@@ -93,7 +94,11 @@ module.exports.getCRUDMethods = (options) => {
                     if (err1) throw err1;
                     const collection = client.db(options.database).collection(options.collection);
                     generateIdIfRequired(data).then(newData => {
-                        collection.insert(newData, (err2, doc) => {
+                        let method = 'insertOne';
+                        if (Array.isArray(newData)) {
+                            method = 'insertMany';
+                        }
+                        collection[method](newData, (err2, doc) => {
                             if (err2) throw err2;
                             resolve(doc)
                             client.close();
@@ -161,15 +166,38 @@ module.exports.getCRUDMethods = (options) => {
     };
     function generateIdIfRequired(data) {
         return new Promise((resolve, reject) => {
-            if (data._id || !options.customId) {
-                resolve(data);
-            } else {
-                utils.getNextId(options).then(id => {
-                    data._id = id;
-                    resolve(data);
+            if (Array.isArray(data)) {
+                let pattern = options.collection.prefix(3).toUpperCase();
+                if (options.idPattern) {
+                    pattern = options.idPattern;
+                }
+                let idCounter = 0;
+                utils.getNextCounter(options).then(next => {
+                    data.forEach((item, i) => {
+                        if (!item._id && options.customId) {
+                            idCounter++;
+                            item._id = renderId.render(pattern, next + 1);
+                        }
+                    });
+                    utils.setNextCounter(options, next + idCounter).then(doc => {
+                        resolve(data);
+                    }).catch(err => {
+                        reject(err);
+                    });
                 }).catch(err => {
                     reject(err);
                 });
+            } else {
+                if (data._id || !options.customId) {
+                    resolve(data);
+                } else {
+                    utils.getNextId(options).then(id => {
+                        data._id = id;
+                        resolve(data);
+                    }).catch(err => {
+                        reject(err);
+                    });
+                }
             }
         });
     }

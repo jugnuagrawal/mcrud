@@ -1,7 +1,7 @@
 {
   "name": "mcrud",
   "version": "1.0.0",
-  "description": "MongoDB Crudder",
+  "description": "Smallest CRUD wrapper over mongodb client with Custom ID generator",
   "keywords": [
     "mongodb",
     "crud",

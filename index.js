@@ -54,7 +54,7 @@ module.exports.getCRUDMethods = (options) => {
         });
     };
     /**
-     * @param {{filter:{key:value},sort:string,page:number,count:number}} params get record options
+     * @param {{filter:{key:value},sort:string,page:number,count:number,select:string}} params get record options
      * @returns {Promise} Promise<any>
      */
     e.get = (params) => {
@@ -83,13 +83,17 @@ module.exports.getCRUDMethods = (options) => {
                     logger.debug(JSON.stringify(params.filter) + ' filter applied in :', options.collection);
                     let query = collection.find(params.filter);
                     logger.debug(params.count + ' count applied in :', options.collection);
+                    if (params.select) {
+                        query = query.project(getAsObject(params.select));
+                        logger.debug(params.select + ' select applied in :', options.collection);
+                    }
                     if (params.count != -1) {
                         const skip = (params.page - 1) * params.count;
                         query = query.limit(params.count).skip(skip);
                         logger.debug(params.page + ' page applied in :', options.collection);
                     }
                     if (params.sort) {
-                        query = query.sort(getSortObject(params.sort));
+                        query = query.sort(getAsObject(params.sort));
                         logger.debug(params.sort + ' sort applied in :', options.collection);
                     }
                     query.toArray((err2, doc) => {
@@ -152,6 +156,9 @@ module.exports.getCRUDMethods = (options) => {
                 if (!filter) {
                     filter = {};
                 }
+                if (typeof filter === 'string') {
+                    filter = JSON.parse(filter);
+                }
                 MongoClient.connect(options.url, (err1, client) => {
                     if (err1) throw err1;
                     logger.debug('Connected to :', options.url);
@@ -180,6 +187,9 @@ module.exports.getCRUDMethods = (options) => {
             try {
                 if (!filter) {
                     filter = {};
+                }
+                if (typeof filter === 'string') {
+                    filter = JSON.parse(filter);
                 }
                 MongoClient.connect(options.url, (err1, client) => {
                     if (err1) throw err1;
@@ -266,9 +276,15 @@ module.exports.getCRUDMethods = (options) => {
             }
         });
     }
-    function getSortObject(sort) {
+
+    /**
+     * 
+     * @param {string} value
+     * @returns {key:value} 
+     */
+    function getAsObject(value) {
         try {
-            let temp = sort.split(',');
+            let temp = value.split(',');
             temp = temp.map(e => {
                 let key = e;
                 if (key.startsWith('-')) {

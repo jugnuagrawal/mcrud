@@ -5,7 +5,7 @@ Smallest CRUD wrapper over mongodb client with Custom ID generator.
 ## APIs
 
 - count : get count of records with filter
-- get : get records with filter, pagination and sorting
+- get : get records with filter, select, pagination and sorting
 - post : create one or many record with custom ID generation
 - put : update one or many record with filter
 - delete : delete one or many record with filter

@@ -8,6 +8,11 @@ const logger = log4js.getLogger('mcrud');
 
 logger.level = process.env.LOG_LEVEL || 'info';
 
+log4js.configure({
+    appenders: { mcrud: { type: 'file', filename: path.join(process.cwd(), 'logs/mcrud.log') } },
+    categories: { default: { appenders: ['mcrud'], level: logger.level } }
+});
+
 /**
  * @param {{url:string,database:string,collection:string,customId:boolean,idPattern:string}} options CRUD options
  */
@@ -28,11 +33,15 @@ module.exports.getCRUDMethods = (options) => {
                 }
                 MongoClient.connect(options.url, (err1, client) => {
                     if (err1) throw err1;
+                    logger.debug('Connected to :', options.url);
                     const collection = client.db(options.database).collection(options.collection);
+                    logger.debug('Using db :', options.database);
                     collection.find(filter).count((err2, doc) => {
                         if (err2) throw err2;
-                        resolve(doc);
+                        logger.debug(doc + ' no of documents found in :', options.collection);
                         client.close();
+                        logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
+                        resolve(doc);
                     });
                 });
             } catch (e) {
@@ -54,6 +63,9 @@ module.exports.getCRUDMethods = (options) => {
                 if (!params.filter) {
                     params.filter = {};
                 }
+                if (typeof params.filter === 'string') {
+                    params.filter = JSON.parse(params.filter);
+                }
                 if (!params.count) {
                     params.count = 30;
                 }
@@ -62,19 +74,27 @@ module.exports.getCRUDMethods = (options) => {
                 }
                 MongoClient.connect(options.url, (err1, client) => {
                     if (err1) throw err1;
+                    logger.debug('Connected to :', options.url);
                     const collection = client.db(options.database).collection(options.collection);
+                    logger.debug('Using db :', options.database);
+                    logger.debug(JSON.stringify(params.filter) + ' filter applied in :', options.collection);
                     let query = collection.find(params.filter);
+                    logger.debug(params.count + ' count applied in :', options.collection);
                     if (params.count != -1) {
                         const skip = (params.page - 1) * params.count;
                         query = query.limit(params.count).skip(skip);
+                        logger.debug(params.page + ' page applied in :', options.collection);
                     }
                     if (params.sort) {
                         query = query.sort(getSortObject(params.sort));
+                        logger.debug(params.sort + ' sort applied in :', options.collection);
                     }
                     query.toArray((err2, doc) => {
                         if (err2) throw err2;
-                        resolve(doc);
+                        logger.debug(doc.length + ' results found in :', options.collection);
                         client.close();
+                        logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
+                        resolve(doc);
                     });
                 });
             } catch (e) {
@@ -92,16 +112,21 @@ module.exports.getCRUDMethods = (options) => {
             try {
                 MongoClient.connect(options.url, (err1, client) => {
                     if (err1) throw err1;
+                    logger.debug('Connected to :', options.url);
                     const collection = client.db(options.database).collection(options.collection);
+                    logger.debug('Using db :', options.database);
                     generateIdIfRequired(data).then(newData => {
                         let method = 'insertOne';
                         if (Array.isArray(newData)) {
                             method = 'insertMany';
                         }
+                        logger.debug('Using method ' + method + ' for :', options.collection);
                         collection[method](newData, (err2, doc) => {
                             if (err2) throw err2;
-                            resolve(doc)
+                            logger.debug(doc.insertedCount + ' document(s) inserted in :', options.collection);
                             client.close();
+                            logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
+                            resolve(doc)
                         });
                     }).catch(err => {
                         reject(err);
@@ -126,11 +151,15 @@ module.exports.getCRUDMethods = (options) => {
                 }
                 MongoClient.connect(options.url, (err1, client) => {
                     if (err1) throw err1;
+                    logger.debug('Connected to :', options.url);
                     const collection = client.db(options.database).collection(options.collection);
-                    collection.update(filter, data, (err2, doc) => {
+                    logger.debug('Using db :', options.database);
+                    collection.updateMany(filter, data, (err2, doc) => {
                         if (err2) throw err2;
-                        resolve(doc)
+                        logger.debug(doc.modifiedCount + ' document(s) updated in :', options.collection);
                         client.close();
+                        logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
+                        resolve(doc)
                     });
                 });
             } catch (e) {
@@ -151,11 +180,15 @@ module.exports.getCRUDMethods = (options) => {
                 }
                 MongoClient.connect(options.url, (err1, client) => {
                     if (err1) throw err1;
+                    logger.debug('Connected to :', options.url);
                     const collection = client.db(options.database).collection(options.collection);
+                    logger.debug('Using db :', options.database);
                     collection.deleteMany(filter, (err2, doc) => {
                         if (err2) throw err2
-                        resolve(doc)
+                        logger.debug(doc.deletedCount + ' document(s) deleted in :', options.collection);
                         client.close();
+                        logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
+                        resolve(doc)
                     });
                 });
             } catch (e) {

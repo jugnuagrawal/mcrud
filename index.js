@@ -280,7 +280,7 @@ module.exports.getCRUDMethods = (options) => {
     /**
      * 
      * @param {string} value
-     * @returns {key:value} 
+     * @returns {{key:number}}
      */
     function getAsObject(value) {
         try {

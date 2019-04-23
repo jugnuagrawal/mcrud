@@ -306,3 +306,30 @@ module.exports.getCRUDMethods = (options) => {
     }
     return e;
 };
+
+
+/**
+ * @param {{url:string,database:string,collection:string,idPattern:string}} options ID options
+ */
+module.exports.getNextCounter = (options) => {
+    return new Promise((resolve, reject) => {
+        utils.getNextCounter(options).then(nextVal => {
+            resolve(nextVal);
+        }).catch(err => {
+            reject(err);
+        });
+    })
+};
+
+/**
+ * @param {{url:string,database:string,collection:string,idPattern:string}} options ID options
+ */
+module.exports.setNextCounter = (options, counter) => {
+    return new Promise((resolve, reject) => {
+        utils.setNextCounter(options, counter).then(nextVal => {
+            resolve(nextVal);
+        }).catch(err => {
+            reject(err);
+        });
+    })
+};

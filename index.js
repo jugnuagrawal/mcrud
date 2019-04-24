@@ -311,25 +311,40 @@ module.exports.getCRUDMethods = (options) => {
 /**
  * @param {{url:string,database:string,collection:string,idPattern:string}} options ID options
  */
-module.exports.getNextCounter = (options) => {
-    return new Promise((resolve, reject) => {
-        utils.getNextCounter(options).then(nextVal => {
-            resolve(nextVal);
-        }).catch(err => {
-            reject(err);
-        });
-    })
-};
+module.exports.getIdCounterMethods = (options) => {
+    const e = {};
+    e.getNextCounter = () => {
+        return new Promise((resolve, reject) => {
+            utils.getNextCounter(options).then(nextVal => {
+                resolve(nextVal);
+            }).catch(err => {
+                reject(err);
+            });
+        })
+    };
+    /**
+     * @param {number} counter Counter Value to set
+     */
+    e.setNextCounter = (counter) => {
+        return new Promise((resolve, reject) => {
+            utils.setNextCounter(options, counter).then(nextVal => {
+                resolve(nextVal);
+            }).catch(err => {
+                reject(err);
+            });
+        })
+    };
 
-/**
- * @param {{url:string,database:string,collection:string,idPattern:string}} options ID options
- */
-module.exports.setNextCounter = (options, counter) => {
-    return new Promise((resolve, reject) => {
-        utils.setNextCounter(options, counter).then(nextVal => {
-            resolve(nextVal);
-        }).catch(err => {
-            reject(err);
+    e.getNextId = () => {
+        return new Promise((resolve, reject) => {
+            utils.getNextId(options).then(id => {
+                resolve(id);
+            }).catch(err => {
+                reject(err);
+            });
         });
-    })
-};
+    };
+
+    return e;
+}
+

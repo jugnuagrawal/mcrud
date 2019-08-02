@@ -6,7 +6,7 @@
     "mongodb",
     "crud",
     "smallest",
-    "HTTP CRUD"
+    "Custom Id"
   ],
   "main": "index.js",
   "scripts": {

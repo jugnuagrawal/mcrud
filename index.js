@@ -1,3 +1,4 @@
+const path = require('path');
 const log4js = require('log4js');
 const MongoClient = require('mongodb').MongoClient;
 const renderId = require('render-id');
@@ -23,7 +24,7 @@ module.exports.getCRUDMethods = (options) => {
     const e = {};
     /**
      * @param {{key:value}} filter mongodb filter
-     * @returns {Promise} Promise<any>
+     * @returns {Promise<number>} count of records
      */
     e.count = (filter) => {
         return new Promise((resolve, reject) => {
@@ -34,18 +35,22 @@ module.exports.getCRUDMethods = (options) => {
                 if (typeof filter === 'string') {
                     filter = JSON.parse(filter);
                 }
-                MongoClient.connect(options.url, (err1, client) => {
-                    if (err1) throw err1;
+                MongoClient.connect(options.url).then(client => {
                     logger.debug('Connected to :', options.url);
                     const collection = client.db(options.database).collection(options.collection);
                     logger.debug('Using db :', options.database);
-                    collection.find(filter).count((err2, doc) => {
-                        if (err2) throw err2;
+                    collection.find(filter).count().then(doc => {
                         logger.debug(doc + ' no of documents found in :', options.collection);
                         client.close();
                         logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
                         resolve(doc);
+                    }).catch(err => {
+                        logger.error(err);
+                        reject(err);
                     });
+                }).catch(err => {
+                    logger.error(err);
+                    reject(err);
                 });
             } catch (e) {
                 logger.error(e);
@@ -55,9 +60,9 @@ module.exports.getCRUDMethods = (options) => {
     };
     /**
      * @param {{filter:{key:value},sort:string,page:number,count:number,select:string}} params get record options
-     * @returns {Promise} Promise<any>
+     * @returns {Promise} Array of documents
      */
-    e.get = (params) => {
+    e.list = (params) => {
         return new Promise((resolve, reject) => {
             try {
                 if (!params) {
@@ -75,8 +80,7 @@ module.exports.getCRUDMethods = (options) => {
                 if (!params.page) {
                     params.page = 1;
                 }
-                MongoClient.connect(options.url, (err1, client) => {
-                    if (err1) throw err1;
+                MongoClient.connect(options.url).then(client => {
                     logger.debug('Connected to :', options.url);
                     const collection = client.db(options.database).collection(options.collection);
                     logger.debug('Using db :', options.database);
@@ -96,13 +100,18 @@ module.exports.getCRUDMethods = (options) => {
                         query = query.sort(getAsObject(params.sort));
                         logger.debug(params.sort + ' sort applied in :', options.collection);
                     }
-                    query.toArray((err2, doc) => {
-                        if (err2) throw err2;
+                    query.toArray().then(doc => {
                         logger.debug(doc.length + ' results found in :', options.collection);
                         client.close();
                         logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
                         resolve(doc);
+                    }).catch(err => {
+                        logger.error(err);
+                        reject(err);
                     });
+                }).catch(err => {
+                    logger.error(err);
+                    reject(err);
                 });
             } catch (e) {
                 logger.error(e);
@@ -111,31 +120,36 @@ module.exports.getCRUDMethods = (options) => {
         });
     };
     /**
-     * @param {{key:value}} data data to be insterted as new record
-     * @returns {Promise} Promise<any>
+     * @param {string} id record Id
+     * @param {string} select select fields
+     * @returns {Promise} Single record
      */
-    e.post = (data) => {
+    e.get = (id, select) => {
         return new Promise((resolve, reject) => {
             try {
+                if (!id) {
+                    reject({
+                        message: 'Invalid Id'
+                    });
+                    return;
+                }
                 MongoClient.connect(options.url, (err1, client) => {
                     if (err1) throw err1;
                     logger.debug('Connected to :', options.url);
                     const collection = client.db(options.database).collection(options.collection);
                     logger.debug('Using db :', options.database);
-                    generateIdIfRequired(data).then(newData => {
-                        let method = 'insertOne';
-                        if (Array.isArray(newData)) {
-                            method = 'insertMany';
-                        }
-                        logger.debug('Using method ' + method + ' for :', options.collection);
-                        collection[method](newData, (err2, doc) => {
-                            if (err2) throw err2;
-                            logger.debug(doc.insertedCount + ' document(s) inserted in :', options.collection);
-                            client.close();
-                            logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
-                            resolve(doc)
-                        });
+                    logger.debug(id + ' ID applied in :', options.collection);
+                    let query = collection.findOne({ _id: id });
+                    if (select) {
+                        query = query.project(getAsObject(select));
+                        logger.debug(select + ' select applied in :', options.collection);
+                    }
+                    query.then(doc => {
+                        client.close();
+                        logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
+                        resolve(doc);
                     }).catch(err => {
+                        logger.error(err);
                         reject(err);
                     });
                 });
@@ -146,31 +160,86 @@ module.exports.getCRUDMethods = (options) => {
         });
     };
     /**
-     * @param {{key:value}} filter mongodb filter
      * @param {{key:value}} data data to be insterted as new record
-     * @returns {Promise} Promise<any>
+     * @returns {Promise} The saved document
      */
-    e.put = (filter, data) => {
+    e.post = (data) => {
         return new Promise((resolve, reject) => {
             try {
-                if (!filter) {
-                    filter = {};
-                }
-                if (typeof filter === 'string') {
-                    filter = JSON.parse(filter);
-                }
-                MongoClient.connect(options.url, (err1, client) => {
-                    if (err1) throw err1;
+                MongoClient.connect(options.url).then(client => {
                     logger.debug('Connected to :', options.url);
                     const collection = client.db(options.database).collection(options.collection);
                     logger.debug('Using db :', options.database);
-                    collection.updateMany(filter, { $set: data }, (err2, doc) => {
-                        if (err2) throw err2;
+                    generateIdIfRequired(data).then(newData => {
+                        let method = 'insertOne';
+                        if (Array.isArray(newData)) {
+                            method = 'insertMany';
+                        }
+                        logger.debug('Using method ' + method + ' for :', options.collection);
+                        collection[method](newData).then(status => {
+                            logger.debug(status.insertedCount + ' document(s) inserted in :', options.collection);
+                            let ids;
+                            if (status.insertedIds) {
+                                ids = Object.values(status.insertedIds);
+                            } else {
+                                ids = [status.insertedId];
+                            }
+                            collection.find({ _id: { $in: ids } }).toArray().then(docs => {
+                                client.close();
+                                logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
+                                resolve(docs);
+                            }).catch(err => {
+                                logger.error(err);
+                                reject(err);
+                            });
+                        }).catch(err => {
+                            logger.error(err);
+                            reject(err);
+                        });
+                    }).catch(err => {
+                        logger.error(err);
+                        reject(err);
+                    });
+                }).catch(err => {
+                    logger.error(err);
+                    reject(err);
+                });
+            } catch (e) {
+                logger.error(e);
+                reject(e);
+            }
+        });
+    };
+    /**
+     * @param {string} id recordId
+     * @param {{key:value}} data data to be updated for the recordId
+     * @returns {Promise} Status of the operation
+     */
+    e.put = (id, data) => {
+        return new Promise((resolve, reject) => {
+            try {
+                if (!id) {
+                    reject({
+                        message: 'Invalid Id'
+                    });
+                    return;
+                }
+                MongoClient.connect(options.url).then(client => {
+                    logger.debug('Connected to :', options.url);
+                    const collection = client.db(options.database).collection(options.collection);
+                    logger.debug('Using db :', options.database);
+                    collection.updateOne({ _id: id }, { $set: data }).then(doc => {
                         logger.debug(doc.modifiedCount + ' document(s) updated in :', options.collection);
                         client.close();
                         logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
-                        resolve(doc)
+                        resolve(doc.result);
+                    }).catch(err => {
+                        logger.error(err);
+                        reject(err);
                     });
+                }).catch(err => {
+                    logger.error(err);
+                    reject(err);
                 });
             } catch (e) {
                 logger.error(e);
@@ -179,30 +248,34 @@ module.exports.getCRUDMethods = (options) => {
         });
     };
     /**
-     * @param {{key:value}} filter mongodb filter
-     * @returns {Promise} Promise<any>
+     * @param {string} id recordId
+     * @returns {Promise} Status of the operation
      */
-    e.delete = (filter) => {
+    e.delete = (id) => {
         return new Promise((resolve, reject) => {
             try {
-                if (!filter) {
-                    filter = {};
+                if (!id) {
+                    reject({
+                        message: 'Invalid Id'
+                    });
+                    return;
                 }
-                if (typeof filter === 'string') {
-                    filter = JSON.parse(filter);
-                }
-                MongoClient.connect(options.url, (err1, client) => {
-                    if (err1) throw err1;
+                MongoClient.connect(options.url).then(client => {
                     logger.debug('Connected to :', options.url);
                     const collection = client.db(options.database).collection(options.collection);
                     logger.debug('Using db :', options.database);
-                    collection.deleteMany(filter, (err2, doc) => {
-                        if (err2) throw err2
-                        logger.debug(doc.deletedCount + ' document(s) deleted in :', options.collection);
+                    collection.deleteOne({ _id: id }).then(status => {
+                        logger.debug(status.deletedCount + ' document(s) deleted in :', options.collection);
                         client.close();
                         logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
-                        resolve(doc)
+                        resolve(status.result);
+                    }).catch(err => {
+                        logger.error(err);
+                        reject(err);
                     });
+                }).catch(err => {
+                    logger.error(err);
+                    reject(err);
                 });
             } catch (e) {
                 logger.error(e);
@@ -210,28 +283,22 @@ module.exports.getCRUDMethods = (options) => {
             }
         });
     };
+
     /**
-     * @param {object[]} query mongodb aggregate query
-     * @returns {Promise} Promise<any>
+     * 
+     * @returns {Promise<*>} The mongo collection object
      */
-    e.aggregate = (query) => {
+    e.collection = () => {
         return new Promise((resolve, reject) => {
             try {
-                if (!query) {
-                    query = [];
-                }
-                MongoClient.connect(options.url, (err1, client) => {
-                    if (err1) throw err1;
+                MongoClient.connect(options.url).then(client => {
                     logger.debug('Connected to :', options.url);
                     const collection = client.db(options.database).collection(options.collection);
                     logger.debug('Using db :', options.database);
-                    collection.aggregate(query).toArray((err2, doc) => {
-                        if (err2) throw err2
-                        logger.debug(doc.length + ' document(s) found in :', options.collection);
-                        client.close();
-                        logger.debug('Connection closed :', options.url, 'Database : ' + options.database, 'Collection : ' + options.collection);
-                        resolve(doc)
-                    });
+                    resolve(collection);
+                }).catch(err => {
+                    logger.error(err);
+                    reject(err);
                 });
             } catch (e) {
                 logger.error(e);
@@ -239,6 +306,7 @@ module.exports.getCRUDMethods = (options) => {
             }
         });
     };
+
     function generateIdIfRequired(data) {
         return new Promise((resolve, reject) => {
             if (Array.isArray(data)) {
@@ -246,15 +314,15 @@ module.exports.getCRUDMethods = (options) => {
                 if (options.idPattern) {
                     pattern = options.idPattern;
                 }
-                let idCounter = 0;
+                let idCounter = -1;
                 utils.getNextCounter(options).then(next => {
                     data.forEach((item, i) => {
                         if (!item._id && options.customId) {
                             idCounter++;
-                            item._id = renderId.render(pattern, next + 1);
+                            item._id = renderId.render(pattern, next + idCounter);
                         }
                     });
-                    utils.setNextCounter(options, next + idCounter).then(doc => {
+                    utils.setNextCounter(options, next + idCounter + 1).then(doc => {
                         resolve(data);
                     }).catch(err => {
                         reject(err);

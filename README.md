@@ -16,9 +16,9 @@ Smallest CRUD wrapper over mongodb client with Custom ID generator.
 ## Example POST
 
 ```javascript
-const mcrud = require('mcrud');
+const MCURD = require('mcrud');
 
-const crud = mcrud.getCRUDMethods({
+const crud = new MCURD({
     collection: 'test',
     database: 'mcrud',
     url: 'mongodb://localhost:27017',

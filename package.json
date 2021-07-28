@@ -23,8 +23,8 @@
   },
   "homepage": "https://github.com/jugnuagrawal/mcrud#readme",
   "dependencies": {
-    "log4js": "^4.0.2",
-    "mongodb": "^3.1.13",
-    "render-id": "^1.0.0"
+    "log4js": "^6.3.0",
+    "mongodb": "^4.0.1",
+    "render-id": "^1.0.3"
   }
 }

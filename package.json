@@ -1,6 +1,6 @@
 {
   "name": "mcrud",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Smallest CRUD wrapper over mongodb client with Custom ID generator",
   "keywords": [
     "mongodb",

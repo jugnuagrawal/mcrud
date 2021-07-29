@@ -1,6 +1,7 @@
 const log4js = require('log4js');
 const { MongoClient } = require('mongodb');
 const renderId = require('render-id');
+const _ = require('lodash');
 
 
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
@@ -285,17 +286,16 @@ async function generateIdIfRequired(options, data) {
             let idCounter = -1;
             const next = await utils.getNextCounter(options);
             data.forEach((item, i) => {
-                if (!item._id && options.customId) {
+                if (!item._id && (options.customId || options.idPattern)) {
                     idCounter++;
                     item._id = renderId.render(pattern, next + idCounter);
                 }
             });
             await utils.setNextCounter(options, next + idCounter + 1);
         } else {
-            if (data._id || !options.customId) {
-                return data;
+            if (!data._id && (options.customId || options.idPattern)) {
+                data._id = await utils.getNextId(options);
             }
-            data._id = await utils.getNextId(options);
         }
         return data;
     } catch (e) {

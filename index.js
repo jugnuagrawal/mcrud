@@ -66,9 +66,19 @@ MCRUD.prototype.list = async function (params) {
         if (typeof params.filter === 'string') {
             params.filter = JSON.parse(params.filter);
         }
+        try {
+            if (typeof params.count === 'string') {
+                params.count = parseInt(params.count, 10);
+            }
+        } catch (e) { }
         if (!params.count) {
             params.count = 30;
         }
+        try {
+            if (typeof params.page === 'string') {
+                params.page = parseInt(params.page, 10);
+            }
+        } catch (e) { }
         if (!params.page) {
             params.page = 1;
         }

@@ -89,3 +89,28 @@ crud.post(payload).then(docs => {
 });
 
 ```
+
+
+## Example Express Routes
+
+```javascript
+const router = require('express').Router();
+const MCURD = require('mcrud');
+
+const crud = new MCURD({
+    collection: 'test',
+    database: 'mcrud',
+    url: 'mongodb://localhost:27017',
+    idPattern: 'TE#####ST##'
+});
+
+router.use(crud.expressRoutes());
+
+// consume
+HTTP [GET] /
+HTTP [POST] /
+HTTP [GET] /:id
+HTTP [PUT] /:id
+HTTP [DELETE] /:id
+
+```

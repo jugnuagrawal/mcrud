@@ -1,6 +1,7 @@
 const log4js = require('log4js');
 const { MongoClient } = require('mongodb');
 const renderId = require('render-id');
+const router = require('express').Router();
 const _ = require('lodash');
 
 
@@ -40,7 +41,7 @@ MCRUD.prototype.count = async function (filter) {
         client = await MongoClient.connect(this.options.url);
         const collection = client.db(this.options.database).collection(this.options.collection);
         logger.trace('Using db :', this.options.database);
-        const doc = await collection.find(filter).count();
+        const doc = await collection.countDocuments(filter);
         logger.trace(doc + ' no of documents found in :', this.options.collection);
         return doc
     } catch (e) {
@@ -68,7 +69,7 @@ MCRUD.prototype.list = async function (params) {
         }
         try {
             if (typeof params.count === 'string') {
-                params.count = parseInt(params.count, 10);
+                params.count = parseInt(params.count + '', 10);
             }
         } catch (e) { }
         if (!params.count) {
@@ -76,7 +77,7 @@ MCRUD.prototype.list = async function (params) {
         }
         try {
             if (typeof params.page === 'string') {
-                params.page = parseInt(params.page, 10);
+                params.page = parseInt(params.page + '', 10);
             }
         } catch (e) { }
         if (!params.page) {
@@ -114,7 +115,7 @@ MCRUD.prototype.list = async function (params) {
 };
 
 
-MCRUD.prototype.get = async function (id, select) {
+MCRUD.prototype.show = async function (id, select) {
     let client;
     try {
         if (!id) {
@@ -147,7 +148,7 @@ MCRUD.prototype.get = async function (id, select) {
 };
 
 
-MCRUD.prototype.post = async function (data) {
+MCRUD.prototype.create = async function (data) {
     let client;
     try {
         client = await MongoClient.connect(this.options.url);
@@ -177,7 +178,7 @@ MCRUD.prototype.post = async function (data) {
     }
 };
 
-MCRUD.prototype.put = async function (id, data, upsert) {
+MCRUD.prototype.update = async function (id, data, upsert) {
     let client;
     try {
         client = await MongoClient.connect(this.options.url);
@@ -200,7 +201,7 @@ MCRUD.prototype.put = async function (id, data, upsert) {
     }
 };
 
-MCRUD.prototype.delete = async function (id) {
+MCRUD.prototype.destroy = async function (id) {
     let client;
     try {
         client = await MongoClient.connect(this.options.url);
@@ -239,6 +240,69 @@ MCRUD.prototype.collection = async function () {
     }
 };
 
+MCRUD.prototype.expressRoutes = function () {
+    // let path = _.camelCase(this.options.collection);
+    router.get(`/`, async (req, res) => {
+        try {
+            if (req.query.countOnly) {
+                let count = await this.count(req.query.filter);
+                res.status(200).json(count);
+            } else {
+                let records = await this.list(req.query);
+                res.status(200).json(records);
+            }
+        } catch (err) {
+            logger.error('Error in route [GET] /');
+            logger.error(err);
+            res.status(500).json({ message: err.message });
+        }
+    });
+
+    router.post(`/`, async (req, res) => {
+        try {
+            let records = await this.create(req.body);
+            res.status(200).json(records);
+        } catch (err) {
+            logger.error('Error in route [POST] /');
+            logger.error(err);
+            res.status(500).json({ message: err.message });
+        }
+    });
+
+    router.get(`/:id`, async (req, res) => {
+        try {
+            let record = await this.show(req.params.id, req.query.select);
+            res.status(200).json(record);
+        } catch (err) {
+            logger.error('Error in route [GET] /:id');
+            logger.error(err);
+            res.status(500).json({ message: err.message });
+        }
+    });
+
+    router.put(`/:id`, async (req, res) => {
+        try {
+            let record = await this.update(req.params.id, req.body, req.query.upsert);
+            res.status(200).json(record);
+        } catch (err) {
+            logger.error('Error in route [PUT] /:id');
+            logger.error(err);
+            res.status(500).json({ message: err.message });
+        }
+    });
+
+    router.delete(`/:id`, async (req, res) => {
+        try {
+            let record = await this.destroy(req.params.id);
+            res.status(200).json(record);
+        } catch (err) {
+            logger.error('Error in route [DELETE] /:id');
+            logger.error(err);
+            res.status(500).json({ message: err.message });
+        }
+    });
+    return router;
+}
 
 MCRUD.prototype.getNextCounter = async function () {
     try {
@@ -257,7 +321,6 @@ MCRUD.prototype.setNextCounter = async function (counter) {
         throw e;
     }
 };
-
 
 MCRUD.prototype.getNextId = async function () {
     try {
@@ -313,6 +376,5 @@ async function generateIdIfRequired(options, data) {
         throw e;
     }
 }
-
 
 module.exports = MCRUD;
